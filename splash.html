@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>LightCall</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 300px;
+            height: 300px;
+            background: transparent;
+            overflow: hidden;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        #splash-stage {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111214;
+            border-radius: 24px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Anneau lumineux qui tourne derrière le logo, dans le dégradé rose/orange */
+        #glow-ring {
+            position: absolute;
+            width: 190px;
+            height: 190px;
+            border-radius: 50%;
+            background: conic-gradient(
+                    from 0deg,
+                    transparent 0deg,
+                    #ff5f8f 90deg,
+                    #ff8a3d 180deg,
+                    transparent 270deg,
+                    transparent 360deg
+            );
+            filter: blur(14px);
+            opacity: 0.55;
+            animation: spin 2.6s linear infinite;
+        }
+
+        /* Masque central pour ne garder que la lueur autour du logo */
+        #glow-mask {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: #111214;
+        }
+
+        #logo-wrap {
+            position: relative;
+            width: 128px;
+            height: 128px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: breathe 1.8s ease-in-out infinite;
+        }
+
+        #logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards, glowPulse 1.8s ease-in-out infinite;
+            animation-delay: 0s, 0.5s;
+        }
+
+        #loading-text {
+            position: absolute;
+            bottom: 26px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            color: #9a9da2;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out 0.3s forwards, textPulse 1.8s ease-in-out infinite;
+            animation-delay: 0.3s, 0.8s;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.07); }
+        }
+
+        @keyframes glowPulse {
+            0%, 100% {
+                filter: drop-shadow(0 0 6px rgba(255, 95, 143, 0.35))
+                drop-shadow(0 0 14px rgba(255, 138, 61, 0.25));
+            }
+            50% {
+                filter: drop-shadow(0 0 14px rgba(255, 95, 143, 0.6))
+                drop-shadow(0 0 26px rgba(255, 138, 61, 0.45));
+            }
+        }
+
+        @keyframes textPulse {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+<div id="splash-stage">
+    <div id="glow-ring"></div>
+    <div id="glow-mask"></div>
+    <div id="logo-wrap">
+        <img id="logo-img" src="logo-splash.png" alt="LightCall">
+    </div>
+    <div id="loading-text">Chargement...</div>
+</div>
+</body>
+</html>
