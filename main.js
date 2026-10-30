@@ -1,14 +1,30 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require("electron");
 const path = require("path");
 const Store = require("electron-store");
+const { autoUpdater } = require("electron-updater");
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, session, desktopCapturer } = require("electron");
 
 const store = new Store();
 
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+let splashWindow = null;
 
 const APP_URL = "https://lightcall.ca";
+
+function createSplashWindow() {
+    splashWindow = new BrowserWindow({
+        width: 300,
+        height: 300,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        resizable: false,
+        skipTaskbar: true,
+        webPreferences: { contextIsolation: true, nodeIntegration: false }
+    });
+    splashWindow.loadFile(path.join(__dirname, "splash.html"));
+}
 
 function getCloseToTraySetting() {
     return store.get("closeToTray", true);
@@ -28,13 +44,26 @@ function createWindow() {
             permissions: ["media"]
         },
         autoHideMenuBar: true,
-        backgroundColor: "#111111"
+        backgroundColor: "#111111",
+        show: false
     });
 
     mainWindow.loadURL(APP_URL);
+    mainWindow.webContents.session.clearCache();
+    // FIX : ferme le splash dès que la page a complètement fini de charger
+    mainWindow.webContents.once("did-finish-load", () => {
+        setTimeout(() => {
+            if (splashWindow) {
+                splashWindow.close();
+                splashWindow = null;
+            }
+            mainWindow.show();
+            mainWindow.focus();
+        }, 500);
+    });
 
     mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-        const allowed = ["media", "camera", "microphone", "notifications", "clipboard-read", "clipboard-write"];
+        const allowed = ["media", "camera", "microphone", "notifications", "clipboard-read", "clipboard-write", "fullscreen"];
         callback(allowed.includes(permission));
     });
 
@@ -90,8 +119,39 @@ ipcMain.handle("set-close-to-tray", (event, value) => {
 ipcMain.handle("is-electron", () => true);
 
 app.whenReady().then(() => {
+    createSplashWindow();
     createWindow();
+
+    // Récupère la liste des écrans/fenêtres partageables
+    ipcMain.handle("get-desktop-sources", async () => {
+        const sources = await desktopCapturer.getSources({
+            types: ["window", "screen"],
+            thumbnailSize: { width: 300, height: 200 }
+        });
+        return sources.map(s => ({
+            id: s.id,
+            name: s.name,
+            thumbnail: s.thumbnail.toDataURL()
+        }));
+    });
+
+    // Intercepte les demandes de partage d'écran pour afficher NOTRE popup au lieu de celui de Chrome
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+        mainWindow.webContents.send("open-screen-picker");
+
+        ipcMain.once("screen-picker-result", async (event, sourceId) => {
+            if (!sourceId) {
+                callback({});
+                return;
+            }
+            const sources = await desktopCapturer.getSources({ types: ["window", "screen"] });
+            const source = sources.find(s => s.id === sourceId);
+            callback({ video: source });
+        });
+    }, { useSystemPicker: false });
+
     createTray();
+    autoUpdater.checkForUpdatesAndNotify();
 
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
